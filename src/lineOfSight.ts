@@ -14,7 +14,6 @@ import {
   PILLARS,
   SPAWNS,
   WAVES,
-  ZUK_SAFE_SPOTS,
 } from "./constants";
 
 import {
@@ -71,7 +70,6 @@ export class LineOfSight {
   // Visualisation settings
   showSpawns = true;
   showPlayerLoS = true;
-  showZukSpots = true;
   showNibblerSpawn = true;
   fromWaveStart: boolean = false;
 
@@ -272,7 +270,6 @@ export class LineOfSight {
       pillarSouth: this.pillarsEnabled[2],
       showSpawns: this.showSpawns,
       showPlayerLoS: this.showPlayerLoS,
-      showZukSpots: this.showZukSpots,
       showNibblerSpawn: this.showNibblerSpawn,
       isReplaying: !!this.replayAuto,
       hasReplay: !!this.replay && this.replayTick !== null && !!this.replay[this.replayTick],
@@ -582,11 +579,6 @@ export class LineOfSight {
     this.drawWave();
   }
 
-  public toggleZukSpots() {
-    this.showZukSpots = !this.showZukSpots;
-    this.drawWave();
-  }
-
   public toggleNibblerSpawn() {
     this.showNibblerSpawn = !this.showNibblerSpawn;
     this.drawWave();
@@ -657,8 +649,16 @@ export class LineOfSight {
     this.mobs = [];
     this.reset();
     const loaded = WAVES[wave - 1];
-    const nibblers = NIBBLER_GROUPS[Math.floor(Math.random() * NIBBLER_GROUPS.length)];
-    this.mobs.push(convertMobSpecToMob([nibblers[0], nibblers[1], nibblers[2]]));
+    // nibblers spawn at the base of a pillar, so only standing pillars
+    // are candidates
+    const availableGroups = NIBBLER_GROUPS.filter(
+      (_, i) => this.pillarsEnabled[i],
+    );
+    if (availableGroups.length > 0) {
+      const nibblers =
+        availableGroups[Math.floor(Math.random() * availableGroups.length)];
+      this.mobs.push(convertMobSpecToMob([nibblers[0], nibblers[1], nibblers[2]]));
+    }
     const availSpawns = [...SPAWNS];
     for (let i = 0; i < loaded.length; i++) {
       const [spawn] = availSpawns.splice(Math.floor(Math.random() * availSpawns.length), 1);
@@ -1075,17 +1075,6 @@ export class LineOfSight {
       3 * TILE_SIZE,
       -3 * TILE_SIZE,
     );
-    // zuk safe spots
-    ctx.globalAlpha = this.showZukSpots ? 0.35 : 0;
-    ctx.fillStyle = "green";
-    for (let i = 0; i < ZUK_SAFE_SPOTS.length; i++) {
-      ctx.fillRect(
-        ZUK_SAFE_SPOTS[i][0] * TILE_SIZE,
-        (ZUK_SAFE_SPOTS[i][1] + 1) * TILE_SIZE,
-        TILE_SIZE,
-        -TILE_SIZE,
-      );
-    }
     ctx.globalAlpha = 1;
     //mobs
     for (let i = 0; i < this.mobs.length; i++) {
@@ -1128,14 +1117,29 @@ export class LineOfSight {
       this.drawLOS(this.selected[0], this.selected[1], s, r, false, c);
     }
 
-    // draw player tile; darker than the cyan LoS overlay so it stands out
-    ctx.fillStyle = "royalblue";
-    ctx.fillRect(
-      this.selected[0] * TILE_SIZE,
-      (this.selected[1] + 1) * TILE_SIZE,
-      TILE_SIZE,
-      -TILE_SIZE,
-    );
+    // draw player: cyan tile with the sprite squashed into it, as in
+    // Supalosa's tool. The draw rect is exactly the tile square, so the
+    // same code works in both orientations (with the flipped south sprite)
+    {
+      const { size: s, color: c } = NPC_INFO[MODE_PLAYER];
+      ctx.fillStyle = c;
+      ctx.fillRect(
+        this.selected[0] * TILE_SIZE,
+        (this.selected[1] + 1) * TILE_SIZE,
+        TILE_SIZE,
+        -TILE_SIZE,
+      );
+      const image = this.images()[MODE_PLAYER];
+      if (image) {
+        ctx.drawImage(
+          image,
+          this.selected[0] * TILE_SIZE,
+          (this.selected[1] - s + 1) * TILE_SIZE,
+          s * TILE_SIZE,
+          s * TILE_SIZE,
+        );
+      }
+    }
 
     if (this.cursorLocation) {
       const { size: s, color: c } = NPC_INFO[this.mode];

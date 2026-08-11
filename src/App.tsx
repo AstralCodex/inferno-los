@@ -230,13 +230,6 @@ function App() {
           Spawns
         </ToggleButton>
         <ToggleButton
-          pressed={uiState?.showZukSpots}
-          onClick={() => lineOfSight?.toggleZukSpots()}
-          tooltip="Show the Zuk safespots"
-        >
-          Zuk
-        </ToggleButton>
-        <ToggleButton
           pressed={uiState?.showNibblerSpawn}
           onClick={() => lineOfSight?.toggleNibblerSpawn()}
           tooltip="Show the nibbler spawn zone"

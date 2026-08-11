@@ -36,7 +36,7 @@ type NpcInfo = {
 };
 
 export const NPC_INFO: Record<number, NpcInfo> = {
-  [NPC_TYPES.PLAYER]: { size: 1, range: 10, cd: 0, imgSouth: "", imgNorth: "", color: "cyan", tapeColor: "", name: "Player" },
+  [NPC_TYPES.PLAYER]: { size: 1, range: 10, cd: 0, imgSouth: "player-south.png", imgNorth: "player-north.png", color: "cyan", tapeColor: "", name: "Player" },
   [NPC_TYPES.BAT]: { size: 2, range: 4, cd: 3, imgSouth: "bat-south.png", imgNorth: "bat-north.png", color: "grey", tapeColor: "grey", name: "Bat (Jal-MejRah)" },
   [NPC_TYPES.BLOB_1]: { size: 3, range: 15, cd: 6, imgSouth: "blob-south.png", imgNorth: "blob-north.png", color: "yellow", tapeColor: "yellow", name: "Blob (Jal-Ak)" },
   [NPC_TYPES.BLOB_2]: { size: 3, range: 15, cd: 6, imgSouth: "blob-south.png", imgNorth: "blob-north.png", color: "blue", tapeColor: "blue", name: "Blob (Jal-Ak)" },
@@ -72,13 +72,6 @@ export const SPAWNS: Coordinates[] = [
   [23, 25],
   [1, 28],
   [15, 28],
-];
-
-export const ZUK_SAFE_SPOTS: Coordinates[] = [
-  [3, 0],
-  [9, 0],
-  [19, 0],
-  [25, 0],
 ];
 
 // 3x3 nibbler spawn zone marker

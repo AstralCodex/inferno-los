@@ -62,6 +62,29 @@ describe("wave loading", () => {
     expect(mobs.filter((m) => m[2] === NPC_TYPES.BAT)).toHaveLength(1);
   });
 
+  test("nibbler group only spawns at standing pillars", () => {
+    los.togglePillar(0);
+    los.togglePillar(1); // only the south pillar remains
+    for (let i = 0; i < 5; i++) {
+      los.loadWave(1);
+      const decorative = los
+        ._getMobs()
+        .filter((m) => m[2] >= FIRST_DECORATIVE_TYPE);
+      expect(decorative).toHaveLength(1);
+      expect(decorative[0][2]).toBe(NPC_TYPES.NIBBLERS_SOUTH);
+    }
+  });
+
+  test("no nibbler group when all pillars are down", () => {
+    los.togglePillar(0);
+    los.togglePillar(1);
+    los.togglePillar(2);
+    los.loadWave(1);
+    expect(
+      los._getMobs().filter((m) => m[2] >= FIRST_DECORATIVE_TYPE),
+    ).toHaveLength(0);
+  });
+
   test("ignores invalid wave numbers", () => {
     los.loadWave(NaN);
     los.loadWave(0);
