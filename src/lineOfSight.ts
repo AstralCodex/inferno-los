@@ -1128,26 +1128,14 @@ export class LineOfSight {
       this.drawLOS(this.selected[0], this.selected[1], s, r, false, c);
     }
 
-    // draw player: cyan tile with a black border to stand out
-    {
-      const { color: c } = NPC_INFO[MODE_PLAYER];
-      ctx.fillStyle = c;
-      ctx.fillRect(
-        this.selected[0] * TILE_SIZE,
-        (this.selected[1] + 1) * TILE_SIZE,
-        TILE_SIZE,
-        -TILE_SIZE,
-      );
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(
-        this.selected[0] * TILE_SIZE + 1,
-        this.selected[1] * TILE_SIZE + 1,
-        TILE_SIZE - 2,
-        TILE_SIZE - 2,
-      );
-      ctx.lineWidth = 1;
-    }
+    // draw player tile; darker than the cyan LoS overlay so it stands out
+    ctx.fillStyle = "royalblue";
+    ctx.fillRect(
+      this.selected[0] * TILE_SIZE,
+      (this.selected[1] + 1) * TILE_SIZE,
+      TILE_SIZE,
+      -TILE_SIZE,
+    );
 
     if (this.cursorLocation) {
       const { size: s, color: c } = NPC_INFO[this.mode];

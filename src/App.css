@@ -67,6 +67,10 @@ body {
 
 .UnitButton {
   position: relative;
+  /* the default button border-style is outset, which shades the border
+     color light/dark; solid keeps it uniform */
+  border-style: solid;
+  border-width: 3px;
 }
 
 .UnitButton .overlay {
