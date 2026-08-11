@@ -1117,12 +1117,13 @@ export class LineOfSight {
       this.drawLOS(this.selected[0], this.selected[1], s, r, false, c);
     }
 
-    // draw player: cyan tile with the sprite squashed into it, as in
-    // Supalosa's tool. The draw rect is exactly the tile square, so the
-    // same code works in both orientations (with the flipped south sprite)
+    // draw player: magenta tile (contrasts with the cyan LoS overlay) with
+    // the sprite squashed into it, as in Supalosa's tool. The draw rect is
+    // exactly the tile square, so the same code works in both orientations
+    // (with the flipped south sprite)
     {
-      const { size: s, color: c } = NPC_INFO[MODE_PLAYER];
-      ctx.fillStyle = c;
+      const { size: s } = NPC_INFO[MODE_PLAYER];
+      ctx.fillStyle = "magenta";
       ctx.fillRect(
         this.selected[0] * TILE_SIZE,
         (this.selected[1] + 1) * TILE_SIZE,
