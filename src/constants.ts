@@ -1,0 +1,166 @@
+import { Coordinates } from "./types";
+
+// Type indices are kept identical to the original iFreedive tool so that
+// old spawn URLs (?xxyyM. segments) continue to decode correctly.
+export const NPC_TYPES = {
+  PLAYER: 0,
+  BAT: 1,
+  BLOB_1: 2,
+  BLOB_2: 3,
+  NIBBLER: 4,
+  MELEE: 5,
+  RANGER: 6,
+  MAGER: 7,
+  // Decorative nibbler spawn groups (not simulated), one per pillar.
+  NIBBLERS_WEST: 8,
+  NIBBLERS_NORTH: 9,
+  NIBBLERS_SOUTH: 10,
+} as const;
+export type NpcType = (typeof NPC_TYPES)[keyof typeof NPC_TYPES];
+
+export const MODE_PLAYER = NPC_TYPES.PLAYER;
+
+// The first simulated..non-simulated boundary: types >= 8 are decorative.
+export const FIRST_DECORATIVE_TYPE = 8;
+
+type NpcInfo = {
+  size: number;
+  range: number;
+  cd: number;
+  // sprite for the default (south) view and the flipped (north) view
+  imgSouth: string;
+  imgNorth: string;
+  color: string;
+  tapeColor: string;
+  name: string;
+};
+
+export const NPC_INFO: Record<number, NpcInfo> = {
+  [NPC_TYPES.PLAYER]: { size: 1, range: 10, cd: 0, imgSouth: "", imgNorth: "", color: "cyan", tapeColor: "", name: "Player" },
+  [NPC_TYPES.BAT]: { size: 2, range: 4, cd: 3, imgSouth: "bat-south.png", imgNorth: "bat-north.png", color: "grey", tapeColor: "grey", name: "Bat (Jal-MejRah)" },
+  [NPC_TYPES.BLOB_1]: { size: 3, range: 15, cd: 6, imgSouth: "blob-south.png", imgNorth: "blob-north.png", color: "yellow", tapeColor: "yellow", name: "Blob (Jal-Ak)" },
+  [NPC_TYPES.BLOB_2]: { size: 3, range: 15, cd: 6, imgSouth: "blob-south.png", imgNorth: "blob-north.png", color: "blue", tapeColor: "blue", name: "Blob (Jal-Ak)" },
+  [NPC_TYPES.NIBBLER]: { size: 1, range: 1, cd: 4, imgSouth: "nibbler-west.png", imgNorth: "nibbler-west.png", color: "red", tapeColor: "purple", name: "Nibbler (Jal-Nib)" },
+  [NPC_TYPES.MELEE]: { size: 4, range: 1, cd: 4, imgSouth: "melee-south.png", imgNorth: "melee-north.png", color: "orange", tapeColor: "orange", name: "Melee (Jal-ImKot)" },
+  [NPC_TYPES.RANGER]: { size: 3, range: 15, cd: 4, imgSouth: "ranger-south.png", imgNorth: "ranger-north.png", color: "lime", tapeColor: "lime", name: "Ranger (Jal-Xil)" },
+  [NPC_TYPES.MAGER]: { size: 4, range: 15, cd: 4, imgSouth: "mager-south.png", imgNorth: "mager-north.png", color: "red", tapeColor: "red", name: "Mager (Jal-Zek)" },
+  [NPC_TYPES.NIBBLERS_WEST]: { size: 1, range: 1, cd: 0, imgSouth: "nibbler-west.png", imgNorth: "nibbler-west.png", color: "red", tapeColor: "", name: "Nibbler spawn (west)" },
+  [NPC_TYPES.NIBBLERS_NORTH]: { size: 1, range: 1, cd: 0, imgSouth: "nibbler-north.png", imgNorth: "nibbler-north.png", color: "red", tapeColor: "", name: "Nibbler spawn (north)" },
+  [NPC_TYPES.NIBBLERS_SOUTH]: { size: 1, range: 1, cd: 0, imgSouth: "nibbler-south.png", imgNorth: "nibbler-south.png", color: "red", tapeColor: "", name: "Nibbler spawn (south)" },
+};
+
+export const MAP_WIDTH = 29;
+export const MAP_HEIGHT = 30;
+
+// 3x3 pillars, individually toggleable: [West, North, South]
+export const PILLARS: Coordinates[] = [
+  [0, 9],
+  [17, 7],
+  [10, 23],
+];
+export const PILLAR_NAMES = ["West", "North", "South"] as const;
+export const PILLAR_SIZE = 3;
+
+// 4x4 NPC spawn zones
+export const SPAWNS: Coordinates[] = [
+  [1, 5],
+  [22, 5],
+  [3, 11],
+  [23, 12],
+  [16, 17],
+  [5, 23],
+  [23, 25],
+  [1, 28],
+  [15, 28],
+];
+
+export const ZUK_SAFE_SPOTS: Coordinates[] = [
+  [3, 0],
+  [9, 0],
+  [19, 0],
+  [25, 0],
+];
+
+// 3x3 nibbler spawn zone marker
+export const NIBBLER_SPAWN: Coordinates = [8, 13];
+
+// Decorative nibbler spawn groups placed by wave loading, one chosen at random.
+export const NIBBLER_GROUPS: [number, number, NpcType][] = [
+  [3, 9, NPC_TYPES.NIBBLERS_WEST],
+  [16, 7, NPC_TYPES.NIBBLERS_NORTH],
+  [10, 20, NPC_TYPES.NIBBLERS_SOUTH],
+];
+
+export const DELAY_FIRST_ATTACK_TICKS = 3;
+
+// NPC composition of waves 1-66 (index = wave - 1). Empty arrays are the
+// waves where the previous wave's survivors double up rather than new
+// spawns appearing.
+export const WAVES: number[][] = [
+  [1],
+  [1, 1],
+  [],
+  [2],
+  [2, 1],
+  [2, 1, 1],
+  [2, 3],
+  [],
+  [5],
+  [5, 1],
+  [5, 1, 1],
+  [5, 2],
+  [5, 2, 1],
+  [5, 2, 1, 1],
+  [5, 2, 3],
+  [5, 5],
+  [],
+  [6],
+  [6, 1],
+  [6, 1, 1],
+  [6, 2],
+  [6, 2, 1],
+  [6, 2, 1, 1],
+  [6, 2, 3],
+  [6, 5],
+  [6, 5, 1],
+  [6, 5, 1, 1],
+  [6, 5, 2],
+  [6, 5, 2, 1],
+  [6, 5, 2, 1, 1],
+  [6, 5, 2, 3],
+  [6, 5, 5],
+  [6, 6],
+  [],
+  [7],
+  [7, 1],
+  [7, 1, 1],
+  [7, 2],
+  [7, 2, 1],
+  [7, 2, 1, 1],
+  [7, 2, 3],
+  [7, 5],
+  [7, 5, 1],
+  [7, 5, 1, 1],
+  [7, 5, 2],
+  [7, 5, 2, 1],
+  [7, 5, 2, 1, 1],
+  [7, 5, 2, 3],
+  [7, 5, 5],
+  [7, 6],
+  [7, 6, 1],
+  [7, 6, 1, 1],
+  [7, 6, 2],
+  [7, 6, 2, 1],
+  [7, 6, 2, 1, 1],
+  [7, 6, 2, 3],
+  [7, 6, 5],
+  [7, 6, 5, 1],
+  [7, 6, 5, 1, 1],
+  [7, 6, 5, 2],
+  [7, 6, 5, 2, 1],
+  [7, 6, 5, 2, 1, 1],
+  [7, 6, 5, 2, 3],
+  [7, 6, 5, 5],
+  [7, 6, 6],
+  [7, 7],
+];

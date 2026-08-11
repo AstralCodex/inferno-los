@@ -1,0 +1,101 @@
+@import 'microtip';
+
+/* workaround for https://github.com/ghosh/microtip/issues/12#issuecomment-1062226599 */
+[aria-label][role~="tooltip"]:not(:hover):focus::before,
+[aria-label][role~="tooltip"]:not(:hover):focus::after {
+  opacity: 0;
+}
+
+#map {
+  border: 1px solid black;
+  display: inline-block;
+}
+
+.south {
+  -webkit-transform: rotate(180deg);
+  -moz-transform: rotate(180deg);
+  -ms-transform: rotate(180deg);
+  -o-transform: rotate(180deg);
+  transform: rotate(180deg);
+}
+
+body {
+  width: 860px;
+}
+
+.frame {
+  margin-bottom: 13px;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.units-frame {
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.controls-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.controls-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  height: 64px;
+}
+
+.units-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.units-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.UnitButton {
+  position: relative;
+}
+
+.UnitButton .overlay {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  z-index: 1;
+}
+
+.UnitButton .player-icon {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  background: cyan;
+  border: 1px solid #0aa;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+button[aria-pressed="false"] {
+  opacity: 0.5;
+}
+
+.wave-input {
+  width: 64px;
+  text-align: center;
+}
+
+.footer {
+  text-align: center;
+}
