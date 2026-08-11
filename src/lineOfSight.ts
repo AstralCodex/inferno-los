@@ -158,7 +158,7 @@ export class LineOfSight {
     const playAreaWidth = (bounds.maxX - bounds.minX + 1) * TILE_SIZE;
     const playAreaHeight = (bounds.maxY - bounds.minY + 1) * TILE_SIZE;
 
-    const sourceContext = this.mapElement.getContext("2d")!;
+    const sourceCanvas = this.mapElement;
     const exportCanvas = document.createElement("canvas");
     exportCanvas.width = playAreaWidth + TICKER_WIDTH * TILE_SIZE;
     exportCanvas.height = playAreaHeight;
@@ -181,22 +181,49 @@ export class LineOfSight {
           return true;
         }
         this.step(true);
-        // copy relevant play area to exportCanvas
-        const imageContent = sourceContext.getImageData(
+        const exportCtx = exportCanvas.getContext("2d")!;
+        const tickerWidth = TICKER_WIDTH * TILE_SIZE;
+        // Match the on-screen layout: in the south view the canvas is
+        // CSS-rotated 180 degrees, putting the ticker on the left; rotate
+        // each region individually so the export looks like the page.
+        const playAreaDestX = this.south ? tickerWidth : 0;
+        const tickerDestX = this.south ? 0 : playAreaWidth;
+        exportCtx.save();
+        if (this.south) {
+          exportCtx.translate(playAreaDestX + playAreaWidth, playAreaHeight);
+          exportCtx.rotate(Math.PI);
+        }
+        exportCtx.drawImage(
+          sourceCanvas,
           bounds.minX * TILE_SIZE,
           bounds.minY * TILE_SIZE,
           playAreaWidth,
           playAreaHeight,
+          this.south ? 0 : playAreaDestX,
+          0,
+          playAreaWidth,
+          playAreaHeight,
         );
-        exportCanvas.getContext("2d")?.putImageData(imageContent, 0, 0);
-        // copy ticker to exportCanvas
-        const tickerContent = sourceContext.getImageData(
+        exportCtx.restore();
+        // the ticker is drawn pre-rotated in the south view (see drawWave),
+        // so rotating it again here renders it upright and top-to-bottom
+        exportCtx.save();
+        if (this.south) {
+          exportCtx.translate(tickerDestX + tickerWidth, CANVAS_HEIGHT);
+          exportCtx.rotate(Math.PI);
+        }
+        exportCtx.drawImage(
+          sourceCanvas,
           TICKER_START_X,
           0,
-          TICKER_WIDTH * TILE_SIZE,
+          tickerWidth,
+          CANVAS_HEIGHT,
+          this.south ? 0 : tickerDestX,
+          0,
+          tickerWidth,
           CANVAS_HEIGHT,
         );
-        exportCanvas.getContext("2d")?.putImageData(tickerContent, playAreaWidth, 0);
+        exportCtx.restore();
         return false;
       },
       () => {
@@ -335,21 +362,32 @@ export class LineOfSight {
         ];
         this.cursorLocation = null;
       }
-    } else if (x <= CANVAS_WIDTH && y >= 0 && y <= this.tape.length + 1) {
-      const tapeIndex = Math.floor(y);
-      this.tapeSelectionRange = [tapeIndex];
+    } else {
+      const tapeIndex = this.tickerRow(e.nativeEvent.offsetY);
+      if (x <= CANVAS_WIDTH && tapeIndex >= 0 && tapeIndex <= this.tape.length + 1) {
+        this.tapeSelectionRange = [tapeIndex];
+      }
     }
     this.drawWave();
   }
 
+  /**
+   * Maps a canvas-local pixel y to a ticker tape row. In the south view the
+   * tape is drawn pre-rotated (see drawWave), so the mapping inverts.
+   */
+  private tickerRow(offsetY: number) {
+    return Math.floor(
+      (this.south ? CANVAS_HEIGHT - offsetY : offsetY) / TILE_SIZE,
+    );
+  }
+
   public onCanvasMouseUp(e: React.MouseEvent) {
     let x = e.nativeEvent.offsetX;
-    let y = e.nativeEvent.offsetY;
     x = Math.floor(x / TILE_SIZE);
-    y = Math.floor(y / TILE_SIZE);
     if (this.tapeSelectionRange?.length === 1) {
-      if (x >= MAP_WIDTH && x <= CANVAS_WIDTH && y >= 0 && y <= CANVAS_HEIGHT) {
-        const endY = Math.min(y + 1, this.tape.length);
+      const tapeIndex = this.tickerRow(e.nativeEvent.offsetY);
+      if (x >= MAP_WIDTH && x <= CANVAS_WIDTH && tapeIndex >= 0) {
+        const endY = Math.min(tapeIndex + 1, this.tape.length);
         this.tapeSelectionRange = [this.tapeSelectionRange[0], endY];
       }
     }
@@ -857,7 +895,10 @@ export class LineOfSight {
     }
   }
 
-  private processAttacks(canAttack: boolean): TapeEntry {
+  private processAttacks(
+    canAttack: boolean,
+    preMovePositions: Coordinates[],
+  ): TapeEntry {
     const line: TapeEntry = [];
 
     for (let i = 0; i < this.mobs.length; i++) {
@@ -875,7 +916,10 @@ export class LineOfSight {
           }
         }
       }
-      const value = attacked | ((x & 0xff) << 16) | ((y & 0xff) << 24);
+      // the tape records the position from BEFORE this tick's movement, so
+      // that a replay seeded from tape[n] reproduces tick n exactly
+      const [px, py] = preMovePositions[i];
+      const value = attacked | ((px & 0xff) << 16) | ((py & 0xff) << 24);
       line.push(value);
     }
 
@@ -895,11 +939,13 @@ export class LineOfSight {
       const canMove = this.fromWaveStart ? this.tickCount > 0 : true;
       const canGainLos = this.fromWaveStart ? this.tickCount > 1 : true;
 
+      const preMovePositions: Coordinates[] = this.mobs.map((m) => [m[0], m[1]]);
+
       // Move all mobs
       this.moveMobs(canMove, canGainLos);
 
       // Process attacks
-      const line = this.processAttacks(canAttack);
+      const line = this.processAttacks(canAttack, preMovePositions);
 
       // Record this tick's player position and mob actions to history
       this.playerTape.push([this.selected[0], this.selected[1]]);
@@ -1082,22 +1128,25 @@ export class LineOfSight {
       this.drawLOS(this.selected[0], this.selected[1], s, r, false, c);
     }
 
-    // draw player
+    // draw player: cyan tile with a black border to stand out
     {
-      const { size: s, color: c } = NPC_INFO[MODE_PLAYER];
-      ctx.fillStyle = ctx.strokeStyle = c;
+      const { color: c } = NPC_INFO[MODE_PLAYER];
+      ctx.fillStyle = c;
       ctx.fillRect(
         this.selected[0] * TILE_SIZE,
         (this.selected[1] + 1) * TILE_SIZE,
         TILE_SIZE,
         -TILE_SIZE,
       );
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
       ctx.strokeRect(
-        this.selected[0] * TILE_SIZE,
-        (this.selected[1] + 1) * TILE_SIZE,
-        s * TILE_SIZE,
-        -s * TILE_SIZE,
+        this.selected[0] * TILE_SIZE + 1,
+        this.selected[1] * TILE_SIZE + 1,
+        TILE_SIZE - 2,
+        TILE_SIZE - 2,
       );
+      ctx.lineWidth = 1;
     }
 
     if (this.cursorLocation) {
@@ -1122,7 +1171,14 @@ export class LineOfSight {
       }
       ctx.globalAlpha = 1;
     }
-    // ticker tape
+    // ticker tape. In the south view the canvas is CSS-rotated 180 degrees,
+    // so pre-rotate the ticker region about its own centre: the two rotations
+    // cancel and the tape reads top-to-bottom on screen in both views.
+    ctx.save();
+    if (this.south) {
+      ctx.translate(2 * TICKER_START_X + TICKER_WIDTH * TILE_SIZE, CANVAS_HEIGHT);
+      ctx.rotate(Math.PI);
+    }
     const offset = TICKER_START_X;
     const tickerStartY = (idx: number) => TILE_SIZE * idx;
     for (let i = 0; i < this.tape.length; i++) {
@@ -1168,6 +1224,7 @@ export class LineOfSight {
       );
       ctx.globalAlpha = 1;
     }
+    ctx.restore();
     // mob images
     for (let i = 0; i < this.mobs.length; i++) {
       const [x, y, t] = this.mobs[i];

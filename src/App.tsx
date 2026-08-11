@@ -144,43 +144,43 @@ function App() {
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              label={<span className="player-icon">P</span>}
+              image="./player-north.png"
               borderColor="cyan"
               tooltip="Move the Player by dragging onto the map."
             />
             <DraggableUnitButton
               mode={NPC_TYPES.BAT}
-              image="./bat-south.png"
+              image="./bat-north.png"
               borderColor="grey"
               tooltip="Place a Bat (Jal-MejRah) by dragging onto the map. Hotkey: q"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.BLOB_1}
-              image="./blob-south.png"
+              image="./blob-north.png"
               borderColor="yellow"
               tooltip="Place a Blob (Jal-Ak) by dragging onto the map. Hotkey: w"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.BLOB_2}
-              image="./blob-south.png"
+              image="./blob-north.png"
               borderColor="blue"
               tooltip="Place a second Blob (Jal-Ak) by dragging onto the map."
             />
             <DraggableUnitButton
               mode={NPC_TYPES.MELEE}
-              image="./melee-south.png"
+              image="./melee-north.png"
               borderColor="orange"
               tooltip="Place a Meleer (Jal-ImKot) by dragging onto the map. Hotkey: e"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.RANGER}
-              image="./ranger-south.png"
+              image="./ranger-north.png"
               borderColor="lime"
               tooltip="Place a Ranger (Jal-Xil) by dragging onto the map. Hotkey: r"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.MAGER}
-              image="./mager-south.png"
+              image="./mager-north.png"
               borderColor="red"
               tooltip="Place a Mager (Jal-Zek) by dragging onto the map. Hotkey: t"
             />
