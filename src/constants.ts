@@ -78,8 +78,8 @@ export const SPAWNS: Coordinates[] = [
 // tool's default player position.
 export const START_TILES: { name: string; tile: Coordinates }[] = [
   { name: "xZact", tile: [16, 5] },
-  { name: "Kelvino", tile: [20, 4] },
-  { name: "Aatykon", tile: [14, 10] },
+  { name: "Kelvino", tile: [17, 3] },
+  { name: "Aatykon", tile: [12, 10] },
 ];
 
 // 3x3 nibbler spawn zone marker
