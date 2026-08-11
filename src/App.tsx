@@ -236,6 +236,13 @@ function App() {
         >
           Nib Spawn
         </ToggleButton>
+        <ToggleButton
+          pressed={uiState?.showStartTiles}
+          onClick={() => lineOfSight?.toggleStartTiles()}
+          tooltip="Show the named starting tiles (xZact, Kelvino, Aatykon)"
+        >
+          Start Tiles
+        </ToggleButton>
         <input
           className="wave-input"
           type="number"

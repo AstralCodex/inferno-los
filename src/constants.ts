@@ -74,6 +74,14 @@ export const SPAWNS: Coordinates[] = [
   [15, 28],
 ];
 
+// Named starting tiles, shown as green markers. xZact's tile is also the
+// tool's default player position.
+export const START_TILES: { name: string; tile: Coordinates }[] = [
+  { name: "xZact", tile: [16, 5] },
+  { name: "Kelvino", tile: [20, 4] },
+  { name: "Aatykon", tile: [14, 10] },
+];
+
 // 3x3 nibbler spawn zone marker
 export const NIBBLER_SPAWN: Coordinates = [8, 13];
 

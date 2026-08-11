@@ -13,6 +13,7 @@ import {
   PILLAR_SIZE,
   PILLARS,
   SPAWNS,
+  START_TILES,
   WAVES,
 } from "./constants";
 
@@ -71,6 +72,7 @@ export class LineOfSight {
   showSpawns = true;
   showPlayerLoS = true;
   showNibblerSpawn = true;
+  showStartTiles = true;
   fromWaveStart: boolean = false;
 
   // Map orientation. The canvas is rotated 180 degrees via CSS when true
@@ -260,6 +262,7 @@ export class LineOfSight {
       showSpawns: this.showSpawns,
       showPlayerLoS: this.showPlayerLoS,
       showNibblerSpawn: this.showNibblerSpawn,
+      showStartTiles: this.showStartTiles,
       isReplaying: !!this.replayAuto,
       hasReplay: !!this.replay && this.replayTick !== null && !!this.replay[this.replayTick],
       replayLength: this.replay?.length ?? null,
@@ -567,6 +570,11 @@ export class LineOfSight {
 
   public toggleNibblerSpawn() {
     this.showNibblerSpawn = !this.showNibblerSpawn;
+    this.drawWave();
+  }
+
+  public toggleStartTiles() {
+    this.showStartTiles = !this.showStartTiles;
     this.drawWave();
   }
 
@@ -1071,6 +1079,17 @@ export class LineOfSight {
       3 * TILE_SIZE,
       -3 * TILE_SIZE,
     );
+    // named starting tiles
+    ctx.globalAlpha = this.showStartTiles ? 0.5 : 0;
+    ctx.fillStyle = "lightgreen";
+    for (const { tile } of START_TILES) {
+      ctx.fillRect(
+        tile[0] * TILE_SIZE,
+        (tile[1] + 1) * TILE_SIZE,
+        TILE_SIZE,
+        -TILE_SIZE,
+      );
+    }
     ctx.globalAlpha = 1;
     //mobs
     for (let i = 0; i < this.mobs.length; i++) {
