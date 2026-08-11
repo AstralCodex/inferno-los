@@ -79,7 +79,7 @@ export const SPAWNS: Coordinates[] = [
 export const START_TILES: { name: string; tile: Coordinates }[] = [
   { name: "xZact", tile: [16, 5] },
   { name: "Kelvino", tile: [17, 3] },
-  { name: "Aatykon", tile: [12, 10] },
+  { name: "Aatykon", tile: [13, 10] },
 ];
 
 // 3x3 nibbler spawn zone marker
