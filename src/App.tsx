@@ -322,7 +322,6 @@ function App() {
       </div>
       <canvas
         id="map"
-        className={uiState?.south === false ? "" : "south"}
         ref={handleCanvas}
         onSelect={() => false}
         onContextMenu={(e) => e.preventDefault()}

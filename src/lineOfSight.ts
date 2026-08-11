@@ -180,48 +180,37 @@ export class LineOfSight {
         }
         this.step(true);
         const exportCtx = exportCanvas.getContext("2d")!;
-        const tickerWidth = TICKER_WIDTH * TILE_SIZE;
-        // Match the on-screen layout: in the south view the canvas is
-        // CSS-rotated 180 degrees, putting the ticker on the left; rotate
-        // each region individually so the export looks like the page.
-        const playAreaDestX = this.south ? tickerWidth : 0;
-        const tickerDestX = this.south ? 0 : playAreaWidth;
-        exportCtx.save();
-        if (this.south) {
-          exportCtx.translate(playAreaDestX + playAreaWidth, playAreaHeight);
-          exportCtx.rotate(Math.PI);
-        }
+        // The canvas content already matches the on-screen orientation, so
+        // plain copies suffice. In the south view the map is drawn rotated,
+        // so the content bounds map to a mirrored source rect.
+        const srcX = this.south
+          ? TICKER_START_X - (bounds.maxX + 1) * TILE_SIZE
+          : bounds.minX * TILE_SIZE;
+        const srcY = this.south
+          ? CANVAS_HEIGHT - (bounds.maxY + 1) * TILE_SIZE
+          : bounds.minY * TILE_SIZE;
         exportCtx.drawImage(
           sourceCanvas,
-          bounds.minX * TILE_SIZE,
-          bounds.minY * TILE_SIZE,
+          srcX,
+          srcY,
           playAreaWidth,
           playAreaHeight,
-          this.south ? 0 : playAreaDestX,
+          0,
           0,
           playAreaWidth,
           playAreaHeight,
         );
-        exportCtx.restore();
-        // the ticker is drawn pre-rotated in the south view (see drawWave),
-        // so rotating it again here renders it upright and top-to-bottom
-        exportCtx.save();
-        if (this.south) {
-          exportCtx.translate(tickerDestX + tickerWidth, CANVAS_HEIGHT);
-          exportCtx.rotate(Math.PI);
-        }
         exportCtx.drawImage(
           sourceCanvas,
           TICKER_START_X,
           0,
-          tickerWidth,
+          TICKER_WIDTH * TILE_SIZE,
           CANVAS_HEIGHT,
-          this.south ? 0 : tickerDestX,
+          playAreaWidth,
           0,
-          tickerWidth,
+          TICKER_WIDTH * TILE_SIZE,
           CANVAS_HEIGHT,
         );
-        exportCtx.restore();
         return false;
       },
       () => {
@@ -328,13 +317,26 @@ export class LineOfSight {
     this.drawWave();
   }
 
+  /**
+   * Maps canvas-local pixel coordinates to map tile coordinates, accounting
+   * for the map region being drawn rotated in the south view.
+   */
+  private eventToTile(offsetX: number, offsetY: number): Coordinates {
+    if (this.south) {
+      return [
+        Math.floor((TICKER_START_X - 1 - offsetX) / TILE_SIZE),
+        Math.floor((CANVAS_HEIGHT - 1 - offsetY) / TILE_SIZE),
+      ];
+    }
+    return [Math.floor(offsetX / TILE_SIZE), Math.floor(offsetY / TILE_SIZE)];
+  }
+
   public onCanvasMouseDown(e: React.MouseEvent) {
-    let x = e.nativeEvent.offsetX;
-    let y = e.nativeEvent.offsetY;
+    const offsetX = e.nativeEvent.offsetX;
+    const offsetY = e.nativeEvent.offsetY;
     let selectedNpcIndex = null;
-    x = Math.floor(x / TILE_SIZE);
-    y = Math.floor(y / TILE_SIZE);
-    if (x < MAP_WIDTH) {
+    if (offsetX < TICKER_START_X) {
+      const [x, y] = this.eventToTile(offsetX, offsetY);
       if (this.replay) {
         this.stopReplay();
       }
@@ -360,30 +362,18 @@ export class LineOfSight {
         this.cursorLocation = null;
       }
     } else {
-      const tapeIndex = this.tickerRow(e.nativeEvent.offsetY);
-      if (x <= CANVAS_WIDTH && tapeIndex >= 0 && tapeIndex <= this.tape.length + 1) {
+      const tapeIndex = Math.floor(offsetY / TILE_SIZE);
+      if (tapeIndex >= 0 && tapeIndex <= this.tape.length + 1) {
         this.tapeSelectionRange = [tapeIndex];
       }
     }
     this.drawWave();
   }
 
-  /**
-   * Maps a canvas-local pixel y to a ticker tape row. In the south view the
-   * tape is drawn pre-rotated (see drawWave), so the mapping inverts.
-   */
-  private tickerRow(offsetY: number) {
-    return Math.floor(
-      (this.south ? CANVAS_HEIGHT - offsetY : offsetY) / TILE_SIZE,
-    );
-  }
-
   public onCanvasMouseUp(e: React.MouseEvent) {
-    let x = e.nativeEvent.offsetX;
-    x = Math.floor(x / TILE_SIZE);
     if (this.tapeSelectionRange?.length === 1) {
-      const tapeIndex = this.tickerRow(e.nativeEvent.offsetY);
-      if (x >= MAP_WIDTH && x <= CANVAS_WIDTH && tapeIndex >= 0) {
+      const tapeIndex = Math.floor(e.nativeEvent.offsetY / TILE_SIZE);
+      if (e.nativeEvent.offsetX >= TICKER_START_X && tapeIndex >= 0) {
         const endY = Math.min(tapeIndex + 1, this.tape.length);
         this.tapeSelectionRange = [this.tapeSelectionRange[0], endY];
       }
@@ -394,11 +384,8 @@ export class LineOfSight {
   }
 
   public onCanvasDblClick(e: React.MouseEvent) {
-    let x = e.nativeEvent.offsetX;
-    let y = e.nativeEvent.offsetY;
-    x = Math.floor(x / TILE_SIZE);
-    y = Math.floor(y / TILE_SIZE);
-    if (x < MAP_WIDTH) {
+    if (e.nativeEvent.offsetX < TICKER_START_X) {
+      const [x, y] = this.eventToTile(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
       for (let i = 0; i < this.mobs.length; i++) {
         if (this.doesCollide(x, y, 1, this.mobs[i][0], this.mobs[i][1], NPC_INFO[this.mobs[i][2]].size)) {
           this.removeMob(i);
@@ -430,13 +417,12 @@ export class LineOfSight {
 
   public onCanvasMouseMove(e: React.MouseEvent) {
     // dragging
-    let x = e.nativeEvent.offsetX;
-    let y = e.nativeEvent.offsetY;
-    x = Math.floor(x / TILE_SIZE);
-    y = Math.floor(y / TILE_SIZE);
-    if (x < 0 || x >= MAP_WIDTH || y < 0 || y > MAP_HEIGHT) {
+    const offsetX = e.nativeEvent.offsetX;
+    const offsetY = e.nativeEvent.offsetY;
+    if (offsetX < 0 || offsetX >= TICKER_START_X || offsetY < 0 || offsetY > CANVAS_HEIGHT) {
       return;
     }
+    const [x, y] = this.eventToTile(offsetX, offsetY);
     let mouseIcon = "auto";
     let dirty = false;
     const wasMousedOverNpc = this.mousedOverNpc;
@@ -1038,6 +1024,16 @@ export class LineOfSight {
     ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, this.mapElement.width, this.mapElement.height);
 
+    // The map region is drawn rotated 180 degrees in the south view (the
+    // default), showing the arena as seen from the south. The ticker is
+    // drawn outside this transform so it always sits on the right and
+    // reads top-to-bottom.
+    ctx.save();
+    if (this.south) {
+      ctx.translate(TICKER_START_X, CANVAS_HEIGHT);
+      ctx.rotate(Math.PI);
+    }
+
     const checkerColor = CHECKER ? "#eee" : "#fff";
     for (let i = 0; i < MAP_WIDTH * MAP_HEIGHT; i++) {
       ctx.fillStyle = i % 2 ? "#fff" : checkerColor;
@@ -1164,14 +1160,43 @@ export class LineOfSight {
       }
       ctx.globalAlpha = 1;
     }
-    // ticker tape. In the south view the canvas is CSS-rotated 180 degrees,
-    // so pre-rotate the ticker region about its own centre: the two rotations
-    // cancel and the tape reads top-to-bottom on screen in both views.
-    ctx.save();
-    if (this.south) {
-      ctx.translate(2 * TICKER_START_X + TICKER_WIDTH * TILE_SIZE, CANVAS_HEIGHT);
-      ctx.rotate(Math.PI);
+    // mob images
+    for (let i = 0; i < this.mobs.length; i++) {
+      const [x, y, t] = this.mobs[i];
+      const s = NPC_INFO[t].size;
+      if (!t || t === MODE_PLAYER) {
+        continue;
+      }
+      const image = this.images()[t];
+      if (image) {
+        ctx.drawImage(image, x * TILE_SIZE, (y - s + 1) * TILE_SIZE);
+      }
     }
+
+    // orientation labels; drawn flipped when the map is rotated so they
+    // read correctly on screen
+    const drawLabel = (text: string, cx: number, cy: number, color: string) => {
+      ctx.save();
+      ctx.font = "16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = color;
+      ctx.translate(cx, cy);
+      if (this.south) {
+        ctx.rotate(Math.PI);
+        ctx.textBaseline = "bottom";
+      } else {
+        ctx.textBaseline = "top";
+      }
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
+    };
+    drawLabel("North", (MAP_WIDTH / 2) * TILE_SIZE, 4, "red");
+    drawLabel("South", (MAP_WIDTH / 2) * TILE_SIZE, (MAP_HEIGHT - 1) * TILE_SIZE + 4, "#666");
+
+    // end of the (possibly rotated) map region
+    ctx.restore();
+
+    // ticker tape, always on the right reading top-to-bottom
     const offset = TICKER_START_X;
     const tickerStartY = (idx: number) => TILE_SIZE * idx;
     for (let i = 0; i < this.tape.length; i++) {
@@ -1217,39 +1242,6 @@ export class LineOfSight {
       );
       ctx.globalAlpha = 1;
     }
-    ctx.restore();
-    // mob images
-    for (let i = 0; i < this.mobs.length; i++) {
-      const [x, y, t] = this.mobs[i];
-      const s = NPC_INFO[t].size;
-      if (!t || t === MODE_PLAYER) {
-        continue;
-      }
-      const image = this.images()[t];
-      if (image) {
-        ctx.drawImage(image, x * TILE_SIZE, (y - s + 1) * TILE_SIZE);
-      }
-    }
-
-    // orientation labels; drawn flipped when the canvas is CSS-rotated so
-    // they read correctly on screen
-    const drawLabel = (text: string, cx: number, cy: number, color: string) => {
-      ctx.save();
-      ctx.font = "16px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillStyle = color;
-      ctx.translate(cx, cy);
-      if (this.south) {
-        ctx.rotate(Math.PI);
-        ctx.textBaseline = "bottom";
-      } else {
-        ctx.textBaseline = "top";
-      }
-      ctx.fillText(text, 0, 0);
-      ctx.restore();
-    };
-    drawLabel("North", (MAP_WIDTH / 2) * TILE_SIZE, 4, "red");
-    drawLabel("South", (MAP_WIDTH / 2) * TILE_SIZE, (MAP_HEIGHT - 1) * TILE_SIZE + 4, "#666");
   }
 
   // exposed for testing
