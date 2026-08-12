@@ -74,6 +74,31 @@ describe("url tests", () => {
       expect(decoded.mobs).to.deep.equal([[3, 9, 10, 3, 9, 0]]);
     });
 
+    test("decoding InfernoStats plugin named parameters", () => {
+      // wave 62 example from the plugin's own docs
+      const decoded = decodeURL(
+        new URL(
+          "http://localhost:3000/?bat=[[1,5],[3,11]]&blob=[[16,17]]&melee=[[23,12]]&ranger=[[1,28]]&mager=[[15,28]]&copyable",
+        ),
+      );
+      expect(decoded.mobs).to.deep.equal([
+        [1, 5, 1, 1, 5, 0],
+        [3, 11, 1, 3, 11, 0],
+        [16, 17, 2, 16, 17, 0],
+        [23, 12, 5, 23, 12, 0],
+        [1, 28, 6, 1, 28, 0],
+        [15, 28, 7, 15, 28, 0],
+      ]);
+      expect(decoded.pillars).to.deep.equal([true, true, true]);
+    });
+
+    test("malformed named parameters are ignored", () => {
+      const decoded = decodeURL(
+        new URL("http://localhost:3000/?bat=notjson&mager=[[5,23]]"),
+      );
+      expect(decoded.mobs).to.deep.equal([[5, 23, 7, 5, 23, 0]]);
+    });
+
     test("nibbler pillar assignment round-trips", () => {
       expect(getSpawnUrl([[8, 11, 4, 0]])).toBe(
         "http://localhost:3000/?08114w.",
