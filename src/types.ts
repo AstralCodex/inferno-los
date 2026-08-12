@@ -30,4 +30,6 @@ export type TapeEntry = number[];
 export type ReplayData = {
   mobSpecs: MobSpec[];
   playerPositions: Coordinates[];
+  // tick indices at which the melee dig was triggered
+  digTicks?: number[];
 };

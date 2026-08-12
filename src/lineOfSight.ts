@@ -63,6 +63,9 @@ export class LineOfSight {
   tape: TapeEntry[] = [];
   playerTape: Coordinates[] = [];
   tapeSelectionRange: number[] | null = null; // tape selection, [start, end]
+  // tick indices at which the melee dig was triggered, so replays can
+  // re-apply them (digs are deterministic given the player position)
+  digTicks: number[] = [];
 
   tickCount = 0;
 
@@ -149,7 +152,7 @@ export class LineOfSight {
     if (!this.mapElement) {
       return;
     }
-    const { playerPositions, mobSpecs } = this.getReplayData();
+    const { playerPositions, mobSpecs, digTicks } = this.getReplayData();
     const rawBounds = computeReplayBounds({ playerPositions, mobSpecs }, NPC_INFO);
     const bounds = extendBounds(rawBounds, 4, MAP_WIDTH, MAP_HEIGHT); // extend visible area by 4 tiles
     const playAreaWidth = (bounds.maxX - bounds.minX + 1) * TILE_SIZE;
@@ -163,6 +166,7 @@ export class LineOfSight {
     this.reset();
     this.mobs = mobSpecs.map(convertMobSpecToMob);
     this.replay = playerPositions;
+    this.digTicks = digTicks ?? [];
     this.replayTick = 0;
     this.selected = this.replay[0];
 
@@ -465,7 +469,7 @@ export class LineOfSight {
       return;
     }
     this.hasLoadedSpawns = true;
-    const { mobs: decodedMobs, pillars, south, playerCoordinates, isReplay } =
+    const { mobs: decodedMobs, pillars, south, playerCoordinates, isReplay, digTicks } =
       decodeURL(new URL(window.location.toString()));
     this.mobs = decodedMobs;
     this.sortMobs();
@@ -479,6 +483,7 @@ export class LineOfSight {
       // This is a replay URL - show the spawn state for one tick, then
       // start the replay
       this.replay = playerCoordinates;
+      this.digTicks = digTicks;
       this.replayTick = 0;
       this.selected = this.replay[0];
       this.replayAuto = setTimeout(() => this.doAutoTick(), 600);
@@ -519,6 +524,9 @@ export class LineOfSight {
     }
     const mobTicks = this.tape.slice(lowerBound, upperBoundInclusive);
     const playerPositions = this.playerTape.slice(lowerBound, upperBoundInclusive);
+    const digTicks = this.digTicks
+      .filter((t) => t >= lowerBound && t < upperBoundInclusive)
+      .map((t) => t - lowerBound);
 
     // get the mob positions/specs at the start of the selection
     const mobSpecs = mobTicks[0].map((value, mobIdx) => {
@@ -532,7 +540,7 @@ export class LineOfSight {
       }
       return spec;
     });
-    return { playerPositions, mobSpecs };
+    return { playerPositions, mobSpecs, digTicks };
   }
 
   public copyReplayURL() {
@@ -580,6 +588,17 @@ export class LineOfSight {
    * mimicking Jal-ImKot's dig special.
    */
   public meleeDig() {
+    if (!this.replay) {
+      const tick = this.tape.length;
+      if (!this.digTicks.includes(tick)) {
+        this.digTicks.push(tick);
+      }
+    }
+    this.applyMeleeDig();
+    this.drawWave();
+  }
+
+  private applyMeleeDig() {
     for (let i = 0; i < this.mobs.length; i++) {
       if (this.mobs[i][2] === NPC_TYPES.MELEE) {
         if (this.digPosition(this.selected[0] - 3, this.selected[1] + 3)) {
@@ -600,7 +619,6 @@ export class LineOfSight {
         }
       }
     }
-    this.drawWave();
   }
 
   private digPosition(x: number, y: number) {
@@ -983,6 +1001,11 @@ export class LineOfSight {
 
     this.advanceReplay();
 
+    if (this.replay && this.digTicks.includes(this.tape.length)) {
+      // re-apply a recorded melee dig at the tick it originally happened
+      this.applyMeleeDig();
+    }
+
     if (this.mode == MODE_PLAYER && this.mobs.length > 0) {
       const preMovePositions: Coordinates[] = this.mobs.map((m) => [m[0], m[1]]);
 
@@ -1030,6 +1053,9 @@ export class LineOfSight {
     this.playerTape = [];
     this.tapeSelectionRange = null;
     this.tickCount = 0;
+    if (!this.replay) {
+      this.digTicks = [];
+    }
     if (this.replay) {
       this.replayTick = 0;
       this.selected = this.replay[0];
@@ -1049,6 +1075,25 @@ export class LineOfSight {
     }
     this.mode = m;
     this.drawWave();
+  }
+
+  /**
+   * Draws a mob sprite over its tile box, centring sprites smaller than
+   * the box (e.g. the 20x9 nibbler).
+   */
+  private drawSprite(
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement,
+    x: number,
+    y: number,
+    size: number,
+  ) {
+    const box = size * TILE_SIZE;
+    ctx.drawImage(
+      image,
+      x * TILE_SIZE + Math.max(0, (box - image.width) / 2),
+      (y - size + 1) * TILE_SIZE + Math.max(0, (box - image.height) / 2),
+    );
   }
 
   private drawLOS(x: number, y: number, s: number, r: number, isNPC: boolean, color = "red") {
@@ -1236,7 +1281,7 @@ export class LineOfSight {
       );
       const image = this.images()[this.mode];
       if (image) {
-        ctx.drawImage(image, this.cursorLocation[0] * TILE_SIZE, (this.cursorLocation[1] - s + 1) * TILE_SIZE);
+        this.drawSprite(ctx, image, this.cursorLocation[0], this.cursorLocation[1], s);
       }
       ctx.globalAlpha = 1;
     }
@@ -1249,7 +1294,7 @@ export class LineOfSight {
       }
       const image = this.images()[t];
       if (image) {
-        ctx.drawImage(image, x * TILE_SIZE, (y - s + 1) * TILE_SIZE);
+        this.drawSprite(ctx, image, x, y, s);
       }
     }
 

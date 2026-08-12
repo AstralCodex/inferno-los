@@ -47,6 +47,7 @@ describe("url tests", () => {
         south: true,
         playerCoordinates: null,
         isReplay: false,
+        digTicks: [],
       });
     });
 
@@ -126,6 +127,29 @@ describe("url tests", () => {
       expect(getReplayURL(replay, ALL_PILLARS, true)).toBe(
         "http://localhost:3000/?01051.#0",
       );
+    });
+
+    test("replay url with dig ticks", () => {
+      const replay: ReplayData = {
+        mobSpecs: [createMobSpec(1, 5, 5)],
+        playerPositions: [
+          [0, 0],
+          [1, 1],
+        ],
+        digTicks: [1],
+      };
+      expect(getReplayURL(replay, ALL_PILLARS, true)).toBe(
+        "http://localhost:3000/?01055.#0.257.d1",
+      );
+      const decoded = decodeURL(
+        new URL("http://localhost:3000/?01055.#0.257.d1"),
+      );
+      expect(decoded.digTicks).to.deep.equal([1]);
+      expect(decoded.playerCoordinates).to.deep.equal([
+        [0, 0],
+        [1, 1],
+      ]);
+      expect(decoded.isReplay).toBe(true);
     });
 
     test("replay url with moving player, with idle ticks", () => {

@@ -369,7 +369,13 @@ const UnitButton = ({
       role="tooltip"
     >
       {overlay && <div className="overlay">{overlay}</div>}
-      {image && <img src={image} height="50" draggable="false" />}
+      {image && (
+        <img
+          src={image}
+          style={{ maxWidth: 56, maxHeight: 50, objectFit: "contain" }}
+          draggable="false"
+        />
+      )}
       {label}
     </button>
   );

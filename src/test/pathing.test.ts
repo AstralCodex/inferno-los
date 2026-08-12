@@ -117,3 +117,62 @@ describe("nibbler collision rules", () => {
   });
 });
 
+
+describe("melee dig replay", () => {
+  test("a replay reproduces a recorded dig", () => {
+    // record: melee walks a tick, digs to the player, walks another tick
+    const rec = new LineOfSight();
+    rec._setSelected([20, 20], NPC_TYPES.MELEE);
+    rec.place();
+    rec._setSelected([16, 5], NPC_TYPES.PLAYER);
+    rec.step();
+    rec.meleeDig();
+    rec.step();
+    expect(rec.digTicks).to.deep.equal([1]);
+    const recorded = rec._getMobs()[0];
+
+    // replay from the same start state using the recorded player path
+    // and dig ticks
+    const rep = new LineOfSight();
+    rep._setSelected([20, 20], NPC_TYPES.MELEE);
+    rep.place();
+    rep.mode = NPC_TYPES.PLAYER;
+    rep.replay = [...rec.playerTape];
+    rep.digTicks = [...rec.digTicks];
+    rep.replayTick = 0;
+    rep.selected = rep.replay[0];
+    rep.step();
+    rep.step();
+    const replayed = rep._getMobs()[0];
+    expect([replayed[0], replayed[1]]).to.deep.equal([
+      recorded[0],
+      recorded[1],
+    ]);
+  });
+
+  test("without the dig ticks the replay diverges", () => {
+    const rec = new LineOfSight();
+    rec._setSelected([20, 20], NPC_TYPES.MELEE);
+    rec.place();
+    rec._setSelected([16, 5], NPC_TYPES.PLAYER);
+    rec.step();
+    rec.meleeDig();
+    rec.step();
+    const recorded = rec._getMobs()[0];
+
+    const rep = new LineOfSight();
+    rep._setSelected([20, 20], NPC_TYPES.MELEE);
+    rep.place();
+    rep.mode = NPC_TYPES.PLAYER;
+    rep.replay = [...rec.playerTape];
+    rep.replayTick = 0;
+    rep.selected = rep.replay[0];
+    rep.step();
+    rep.step();
+    const replayed = rep._getMobs()[0];
+    expect([replayed[0], replayed[1]]).not.to.deep.equal([
+      recorded[0],
+      recorded[1],
+    ]);
+  });
+});

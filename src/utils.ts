@@ -151,6 +151,7 @@ export type DecodeURLResult = {
   south: boolean;
   playerCoordinates: Coordinates[] | null;
   isReplay: boolean;
+  digTicks: number[];
 };
 
 // Decodes the legacy iFreedive URL format:
@@ -223,10 +224,19 @@ export function decodeURL(location: URL): DecodeURLResult {
 
   let playerCoordinates: Coordinates[] | null = null;
   let isReplay = false;
-  const hash = playerCoords
+  const digTicks: number[] = [];
+  const allSections = playerCoords
     ?.replace("#", "")
     .split(".")
     .filter((s) => !!s);
+  // dNN sections mark the ticks at which the melee dig was triggered
+  const hash = allSections?.filter((section) => {
+    if (/^d[0-9]+$/.test(section)) {
+      digTicks.push(parseInt(section.slice(1)));
+      return false;
+    }
+    return true;
+  });
   if (hash?.length > 0) {
     const decodeSection = (section: string) => {
       const split = section.split("x");
@@ -247,6 +257,7 @@ export function decodeURL(location: URL): DecodeURLResult {
     south,
     playerCoordinates,
     isReplay,
+    digTicks,
   };
 }
 
@@ -324,6 +335,9 @@ export function getReplayURL(
   url = url.concat(last.toString());
   if (runLength > 1) {
     url = url.concat(`x${runLength}`);
+  }
+  for (const tick of replayData.digTicks ?? []) {
+    url = url.concat(`.d${tick}`);
   }
   return url;
 }
