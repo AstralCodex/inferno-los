@@ -307,7 +307,7 @@ export class LineOfSight {
       case 90: // z, for mager (Jal-Zek)
         this.placeByKey(NPC_TYPES.MAGER);
         break;
-      case 85: // u
+      case 78: // n, for nibbler
         this.placeByKey(NPC_TYPES.NIBBLER);
         break;
     }

@@ -170,9 +170,9 @@ function App() {
             />
             <DraggableUnitButton
               mode={NPC_TYPES.NIBBLER}
-              image="./nibbler.png"
+              image="./nibbler-icon.png"
               borderColor="red"
-              tooltip="Place a Nibbler (Jal-Nib) by dragging onto the map. Hotkey: u"
+              tooltip="Place a Nibbler (Jal-Nib) by dragging onto the map. Hotkey: n"
             />
           </div>
         </div>
