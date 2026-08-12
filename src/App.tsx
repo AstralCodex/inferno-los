@@ -270,17 +270,6 @@ function App() {
         >
           Export Video
         </button>
-        <div>
-          <input
-            type="checkbox"
-            checked={uiState?.fromWaveStart ? true : false}
-            onChange={(e) => lineOfSight?.setFromWaveStart(e.target.checked)}
-            aria-label="NPCs will not attack for 3t after wave start, cannot move on the first tick, have melee distance second tick"
-            data-microtip-position="bottom"
-            role="tooltip"
-          />
-          <span>From wave start</span>
-        </div>
         <span id="replayIndicator">
           {currentReplayLength ? (
             <strong>
@@ -336,7 +325,8 @@ function App() {
         <a href="https://github.com/Supalosa/osrs-colosseum">
           Supalosa's Colosseum tool
         </a>
-        .{" "}
+.
+        <br />
         <a href="https://github.com/AstralCodex/inferno-los/issues">
           [Issue tracker]
         </a>

@@ -98,8 +98,6 @@ export const NAMED_NPC_PARAMS: Record<string, NpcType> = {
   mager: NPC_TYPES.MAGER,
 };
 
-export const DELAY_FIRST_ATTACK_TICKS = 3;
-
 // NPC composition of waves 1-66 (index = wave - 1). Empty arrays are the
 // waves where the previous wave's survivors double up rather than new
 // spawns appearing.

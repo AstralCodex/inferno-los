@@ -149,7 +149,6 @@ export type DecodeURLResult = {
   pillars: boolean[];
   // whether the map is displayed in the default south-facing orientation
   south: boolean;
-  isFromWaveStart: boolean;
   playerCoordinates: Coordinates[] | null;
   isReplay: boolean;
 };
@@ -218,10 +217,9 @@ export function decodeURL(location: URL): DecodeURLResult {
     }
   }
 
-  const hashParts = location.hash?.split("_");
-  const playerCoords = hashParts?.[0];
-
-  const isFromWaveStart = hashParts?.includes("ws") || false;
+  // older URLs may carry _-separated flags after the player coordinates;
+  // they are no longer used and are ignored
+  const playerCoords = location.hash?.split("_")?.[0];
 
   let playerCoordinates: Coordinates[] | null = null;
   let isReplay = false;
@@ -247,7 +245,6 @@ export function decodeURL(location: URL): DecodeURLResult {
     mobs,
     pillars,
     south,
-    isFromWaveStart,
     playerCoordinates,
     isReplay,
   };
@@ -303,7 +300,6 @@ export function getReplayURL(
   replayData: ReplayData,
   pillars: boolean[],
   south: boolean,
-  fromWaveStart: boolean = false,
 ) {
   const { playerPositions, mobSpecs } = replayData;
   let url = getSpawnUrl(mobSpecs, pillars, south);
@@ -328,9 +324,6 @@ export function getReplayURL(
   url = url.concat(last.toString());
   if (runLength > 1) {
     url = url.concat(`x${runLength}`);
-  }
-  if (fromWaveStart) {
-    url = url.concat("_", "ws");
   }
   return url;
 }

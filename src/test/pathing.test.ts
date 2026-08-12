@@ -117,37 +117,3 @@ describe("nibbler collision rules", () => {
   });
 });
 
-describe("from wave start gating", () => {
-  let los: LineOfSight;
-
-  const mager: Mob = [5, 15, NPC_TYPES.MAGER, 5, 15, 0];
-  beforeAll(() => {
-    los = new LineOfSight();
-    los._setSelected([mager[0], mager[1]], mager[2]);
-    los.place();
-    los.setFromWaveStart(true);
-    los._setSelected([5, 10], NPC_TYPES.PLAYER);
-  });
-
-  test("no action on the spawn tick", () => {
-    los.step();
-    checkIdleStep(los, mager);
-  });
-
-  test("moves on the second tick, even with line of sight", () => {
-    los.step();
-    checkMove(los, mager, 5, 14);
-  });
-
-  test("no attack on the third tick", () => {
-    los.step();
-    checkIdleStep(los, mager);
-  });
-
-  test("attacks on the fourth tick", () => {
-    los.step();
-    checkMove(los, mager, 5, 14, 4);
-    // only the fourth tape entry has an attack recorded
-    expect(los.tape.map((line) => line[0] & 0xff)).toEqual([0, 0, 0, 1]);
-  });
-});

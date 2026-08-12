@@ -1,6 +1,5 @@
 import { Coordinates, Mob, MobSpec, ReplayData, TapeEntry } from "./types";
 import {
-  DELAY_FIRST_ATTACK_TICKS,
   FIRST_DECORATIVE_TYPE,
   MAP_HEIGHT,
   MAP_WIDTH,
@@ -72,7 +71,6 @@ export class LineOfSight {
   showPlayerLoS = true;
   showNibblerSpawn = true;
   showStartTiles = true;
-  fromWaveStart: boolean = false;
 
   // Map orientation. The canvas is rotated 180 degrees via CSS when true
   // (the default), showing the arena as seen from the south.
@@ -248,11 +246,6 @@ export class LineOfSight {
     this.subscribers.forEach((callback) => callback());
   }
 
-  public setFromWaveStart = (val: boolean) => {
-    this.fromWaveStart = val;
-    this.onUpdateSubscribers();
-  };
-
   private updateUi() {
     // currently, we always fire subscriber events
     this.onUpdateSubscribers();
@@ -261,7 +254,6 @@ export class LineOfSight {
   private _lastUiState: ReturnType<LineOfSight["computeUiState"]> | null = null;
   private computeUiState() {
     return {
-      fromWaveStart: this.fromWaveStart,
       south: this.south,
       pillarWest: this.pillarsEnabled[0],
       pillarNorth: this.pillarsEnabled[1],
@@ -473,13 +465,12 @@ export class LineOfSight {
       return;
     }
     this.hasLoadedSpawns = true;
-    const { mobs: decodedMobs, pillars, south, isFromWaveStart, playerCoordinates, isReplay } =
+    const { mobs: decodedMobs, pillars, south, playerCoordinates, isReplay } =
       decodeURL(new URL(window.location.toString()));
     this.mobs = decodedMobs;
     this.sortMobs();
     this.pillarsEnabled = pillars;
     this.south = south;
-    this.setFromWaveStart(isFromWaveStart);
     if (!playerCoordinates) {
       return;
     }
@@ -505,22 +496,9 @@ export class LineOfSight {
     const playerMoved =
       this.selected[0] !== PLAYER_ORIGIN[0] || this.selected[1] !== PLAYER_ORIGIN[1];
 
-    // Build hash fragments
-    const hashParts = [];
-
     // Add player position if moved
     if (playerMoved) {
-      hashParts.push(encodeCoordinate(this.selected));
-    }
-
-    // Add flags if enabled
-    if (this.fromWaveStart) {
-      hashParts.push("_ws");
-    }
-
-    // Add hash if there are any parts
-    if (hashParts.length > 0) {
-      url = url.concat("#" + hashParts.join(""));
+      url = url.concat("#" + encodeCoordinate(this.selected));
     }
 
     copyQ(url);
@@ -562,7 +540,6 @@ export class LineOfSight {
       this.getReplayData(),
       this.pillarsEnabled,
       this.south,
-      this.fromWaveStart,
     );
     copyQ(url);
     alert("Replay URL Copied!");
@@ -919,7 +896,7 @@ export class LineOfSight {
     ];
   }
 
-  private moveMobs(canMove: boolean, canGainLos: boolean) {
+  private moveMobs() {
     for (let i = 0; i < this.mobs.length; i++) {
       if (this.mobs[i][2] < FIRST_DECORATIVE_TYPE) {
         const mob = this.mobs[i];
@@ -937,12 +914,11 @@ export class LineOfSight {
         if (pillarTarget !== null) {
           // nibblers walk to their pillar regardless of player line of sight
           [targetX, targetY] = this.pillarTargetTile(pillarTarget, mob);
-          shouldMove = canMove;
+          shouldMove = true;
         } else {
           targetX = this.selected[0];
           targetY = this.selected[1];
-          shouldMove =
-            canMove && !(canGainLos && this.hasLOS(x, y, targetX, targetY, s, r, true));
+          shouldMove = !this.hasLOS(x, y, targetX, targetY, s, r, true);
         }
 
         if (shouldMove) {
@@ -969,10 +945,7 @@ export class LineOfSight {
     }
   }
 
-  private processAttacks(
-    canAttack: boolean,
-    preMovePositions: Coordinates[],
-  ): TapeEntry {
+  private processAttacks(preMovePositions: Coordinates[]): TapeEntry {
     const line: TapeEntry = [];
 
     for (let i = 0; i < this.mobs.length; i++) {
@@ -985,7 +958,7 @@ export class LineOfSight {
         t === NPC_TYPES.NIBBLER && this.nibblerTargetPillar(mob) !== null;
       if (t < FIRST_DECORATIVE_TYPE && !isPillarBound) {
         const { size: s, range: r } = NPC_INFO[t];
-        if (canAttack && this.hasLOS(x, y, this.selected[0], this.selected[1], s, r, true)) {
+        if (this.hasLOS(x, y, this.selected[0], this.selected[1], s, r, true)) {
           if (mob[5] <= 0) {
             attacked = 1;
             mob[5] = NPC_INFO[t].cd;
@@ -1011,17 +984,13 @@ export class LineOfSight {
     this.advanceReplay();
 
     if (this.mode == MODE_PLAYER && this.mobs.length > 0) {
-      const canAttack = this.fromWaveStart ? this.tickCount >= DELAY_FIRST_ATTACK_TICKS : true;
-      const canMove = this.fromWaveStart ? this.tickCount > 0 : true;
-      const canGainLos = this.fromWaveStart ? this.tickCount > 1 : true;
-
       const preMovePositions: Coordinates[] = this.mobs.map((m) => [m[0], m[1]]);
 
       // Move all mobs
-      this.moveMobs(canMove, canGainLos);
+      this.moveMobs();
 
       // Process attacks
-      const line = this.processAttacks(canAttack, preMovePositions);
+      const line = this.processAttacks(preMovePositions);
 
       // Record this tick's player position and mob actions to history
       this.playerTape.push([this.selected[0], this.selected[1]]);
@@ -1311,11 +1280,7 @@ export class LineOfSight {
     const offset = TICKER_START_X;
     const tickerStartY = (idx: number) => TILE_SIZE * idx;
     for (let i = 0; i < this.tape.length; i++) {
-      if (this.fromWaveStart && i < DELAY_FIRST_ATTACK_TICKS) {
-        ctx.fillStyle = i % 2 == 0 ? "#666" : "#777";
-      } else {
-        ctx.fillStyle = i % 2 == 0 ? "#ddd" : "#eee";
-      }
+      ctx.fillStyle = i % 2 == 0 ? "#ddd" : "#eee";
       ctx.fillRect(offset, TILE_SIZE * i, TILE_SIZE * TICKER_WIDTH, TILE_SIZE);
       for (let j = 0; j < this.tape[i].length; j++) {
         const value = this.tape[i][j];

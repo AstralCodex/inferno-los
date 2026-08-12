@@ -46,7 +46,6 @@ describe("url tests", () => {
         pillars: [true, true, true],
         south: true,
         playerCoordinates: null,
-        isFromWaveStart: false,
         isReplay: false,
       });
     });
@@ -147,15 +146,6 @@ describe("url tests", () => {
       );
     });
 
-    test("replay url with fromWaveStart flag", () => {
-      const replay: ReplayData = {
-        mobSpecs: [createMobSpec(1, 5, 1)],
-        playerPositions: [[0, 0]],
-      };
-      expect(getReplayURL(replay, ALL_PILLARS, true, true)).toBe(
-        "http://localhost:3000/?01051.#0_ws",
-      );
-    });
   });
 
   describe("replay decoding tests", () => {
@@ -169,15 +159,17 @@ describe("url tests", () => {
         [7, 8],
       ]);
       expect(decoded.isReplay).toBe(true);
-      expect(decoded.isFromWaveStart).toBe(false);
     });
 
-    test("decoding wave start URL", () => {
+    test("legacy hash flags after the player coordinates are ignored", () => {
       const decoded = decodeURL(
         new URL("http://localhost:3000/?11092.#2311.2055_ws"),
       );
+      expect(decoded.playerCoordinates).to.deep.equal([
+        [7, 9],
+        [7, 8],
+      ]);
       expect(decoded.isReplay).toBe(true);
-      expect(decoded.isFromWaveStart).toBe(true);
     });
 
     test("single player position is not a replay", () => {
