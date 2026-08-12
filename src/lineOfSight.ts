@@ -292,19 +292,19 @@ export class LineOfSight {
       case 40: // down
         this.reset();
         break;
-      case 81: // q
+      case 66: // b, for bat
         this.placeByKey(NPC_TYPES.BAT);
         break;
-      case 87: // w
+      case 65: // a, for blob (Jal-Ak)
         this.placeByKey(NPC_TYPES.BLOB_1);
         break;
-      case 69: // e
+      case 77: // m, for melee
         this.placeByKey(NPC_TYPES.MELEE);
         break;
-      case 82: // r
+      case 82: // r, for ranger
         this.placeByKey(NPC_TYPES.RANGER);
         break;
-      case 84: // t
+      case 90: // z, for mager (Jal-Zek)
         this.placeByKey(NPC_TYPES.MAGER);
         break;
       case 85: // u

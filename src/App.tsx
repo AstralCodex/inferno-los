@@ -136,13 +136,13 @@ function App() {
               mode={NPC_TYPES.BAT}
               image="./bat-north.png"
               borderColor="grey"
-              tooltip="Place a Bat (Jal-MejRah) by dragging onto the map. Hotkey: q"
+              tooltip="Place a Bat (Jal-MejRah) by dragging onto the map. Hotkey: b"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.BLOB_1}
               image="./blob-north.png"
               borderColor="yellow"
-              tooltip="Place a Blob (Jal-Ak) by dragging onto the map. Hotkey: w"
+              tooltip="Place a Blob (Jal-Ak) by dragging onto the map. Hotkey: a"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.BLOB_2}
@@ -154,7 +154,7 @@ function App() {
               mode={NPC_TYPES.MELEE}
               image="./melee-north.png"
               borderColor="orange"
-              tooltip="Place a Meleer (Jal-ImKot) by dragging onto the map. Hotkey: e"
+              tooltip="Place a Meleer (Jal-ImKot) by dragging onto the map. Hotkey: m"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.RANGER}
@@ -166,7 +166,7 @@ function App() {
               mode={NPC_TYPES.MAGER}
               image="./mager-north.png"
               borderColor="red"
-              tooltip="Place a Mager (Jal-Zek) by dragging onto the map. Hotkey: t"
+              tooltip="Place a Mager (Jal-Zek) by dragging onto the map. Hotkey: z"
             />
             <DraggableUnitButton
               mode={NPC_TYPES.NIBBLER}
