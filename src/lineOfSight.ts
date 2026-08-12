@@ -1157,7 +1157,9 @@ export class LineOfSight {
       }
     }
 
-    if (this.cursorLocation) {
+    // NPC placement preview; never drawn for the player mode, so the
+    // player marker is not shaded over after click-to-move
+    if (this.cursorLocation && this.mode !== MODE_PLAYER) {
       const { size: s, color: c } = NPC_INFO[this.mode];
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = ctx.strokeStyle = c;
@@ -1174,7 +1176,7 @@ export class LineOfSight {
         -s * TILE_SIZE,
       );
       const image = this.images()[this.mode];
-      if (image && this.mode !== MODE_PLAYER) {
+      if (image) {
         ctx.drawImage(image, this.cursorLocation[0] * TILE_SIZE, (this.cursorLocation[1] - s + 1) * TILE_SIZE);
       }
       ctx.globalAlpha = 1;

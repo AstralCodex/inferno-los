@@ -132,22 +132,6 @@ function App() {
         </div>
         <div className="units-column">
           <div className="units-row">
-            <UnitButton
-              onMouseDown={(e) => {
-                lineOfSight?.setMode(NPC_TYPES.PLAYER);
-                setDragging(true);
-                e.preventDefault();
-              }}
-              onClick={(e) => {
-                lineOfSight?.setMode(NPC_TYPES.PLAYER, true);
-                setDragging(true);
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              image="./player-north.png"
-              borderColor="cyan"
-              tooltip="Move the Player by dragging onto the map."
-            />
             <DraggableUnitButton
               mode={NPC_TYPES.BAT}
               image="./bat-north.png"
