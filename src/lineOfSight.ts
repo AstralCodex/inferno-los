@@ -5,7 +5,6 @@ import {
   MAP_HEIGHT,
   MAP_WIDTH,
   MODE_PLAYER,
-  NIBBLER_GROUPS,
   NIBBLER_SPAWN,
   NPC_INFO,
   NPC_TYPES,
@@ -169,6 +168,45 @@ export class LineOfSight {
     this.replayTick = 0;
     this.selected = this.replay[0];
 
+    const copyFrame = () => {
+      const exportCtx = exportCanvas.getContext("2d")!;
+      // The canvas content already matches the on-screen orientation, so
+      // plain copies suffice. In the south view the map is drawn rotated,
+      // so the content bounds map to a mirrored source rect.
+      const srcX = this.south
+        ? TICKER_START_X - (bounds.maxX + 1) * TILE_SIZE
+        : bounds.minX * TILE_SIZE;
+      const srcY = this.south
+        ? CANVAS_HEIGHT - (bounds.maxY + 1) * TILE_SIZE
+        : bounds.minY * TILE_SIZE;
+      exportCtx.drawImage(
+        sourceCanvas,
+        srcX,
+        srcY,
+        playAreaWidth,
+        playAreaHeight,
+        0,
+        0,
+        playAreaWidth,
+        playAreaHeight,
+      );
+      exportCtx.drawImage(
+        sourceCanvas,
+        TICKER_START_X,
+        0,
+        TICKER_WIDTH * TILE_SIZE,
+        CANVAS_HEIGHT,
+        playAreaWidth,
+        0,
+        TICKER_WIDTH * TILE_SIZE,
+        CANVAS_HEIGHT,
+      );
+    };
+
+    // the first video frame is the spawn state, before any ticks run
+    this.drawWave();
+    copyFrame();
+
     record(
       exportCanvas,
       () => {
@@ -181,38 +219,7 @@ export class LineOfSight {
           return true;
         }
         this.step(true);
-        const exportCtx = exportCanvas.getContext("2d")!;
-        // The canvas content already matches the on-screen orientation, so
-        // plain copies suffice. In the south view the map is drawn rotated,
-        // so the content bounds map to a mirrored source rect.
-        const srcX = this.south
-          ? TICKER_START_X - (bounds.maxX + 1) * TILE_SIZE
-          : bounds.minX * TILE_SIZE;
-        const srcY = this.south
-          ? CANVAS_HEIGHT - (bounds.maxY + 1) * TILE_SIZE
-          : bounds.minY * TILE_SIZE;
-        exportCtx.drawImage(
-          sourceCanvas,
-          srcX,
-          srcY,
-          playAreaWidth,
-          playAreaHeight,
-          0,
-          0,
-          playAreaWidth,
-          playAreaHeight,
-        );
-        exportCtx.drawImage(
-          sourceCanvas,
-          TICKER_START_X,
-          0,
-          TICKER_WIDTH * TILE_SIZE,
-          CANVAS_HEIGHT,
-          playAreaWidth,
-          0,
-          TICKER_WIDTH * TILE_SIZE,
-          CANVAS_HEIGHT,
-        );
+        copyFrame();
         return false;
       },
       () => {
@@ -478,11 +485,11 @@ export class LineOfSight {
     }
 
     if (isReplay) {
-      // This is a replay URL - start the replay
+      // This is a replay URL - show the spawn state for one tick, then
+      // start the replay
       this.replay = playerCoordinates;
       this.replayTick = 0;
       this.selected = this.replay[0];
-      this.step();
       this.replayAuto = setTimeout(() => this.doAutoTick(), 600);
     } else {
       // This is a spawn URL with just a player position - set position without starting replay
@@ -536,14 +543,17 @@ export class LineOfSight {
     const playerPositions = this.playerTape.slice(lowerBound, upperBoundInclusive);
 
     // get the mob positions/specs at the start of the selection
-    const mobSpecs = mobTicks[0].map(
-      (value, mobIdx) =>
-        [
-          (value >> 16) & 0xff,
-          (value >> 24) & 0xff,
-          this.mobs[mobIdx][2],
-        ] as MobSpec,
-    );
+    const mobSpecs = mobTicks[0].map((value, mobIdx) => {
+      const spec: MobSpec = [
+        (value >> 16) & 0xff,
+        (value >> 24) & 0xff,
+        this.mobs[mobIdx][2],
+      ];
+      if (this.mobs[mobIdx][6] !== undefined) {
+        spec.push(this.mobs[mobIdx][6]);
+      }
+      return spec;
+    });
     return { playerPositions, mobSpecs };
   }
 
@@ -643,15 +653,34 @@ export class LineOfSight {
     this.mobs = [];
     this.reset();
     const loaded = WAVES[wave - 1];
-    // nibblers spawn at the base of a pillar, so only standing pillars
-    // are candidates
-    const availableGroups = NIBBLER_GROUPS.filter(
-      (_, i) => this.pillarsEnabled[i],
-    );
-    if (availableGroups.length > 0) {
-      const nibblers =
-        availableGroups[Math.floor(Math.random() * availableGroups.length)];
-      this.mobs.push(convertMobSpecToMob([nibblers[0], nibblers[1], nibblers[2]]));
+    // Nibblers spawn on random tiles of the 3x3 zone and head for a random
+    // standing pillar (or the player if no pillars stand). Nibbler-only
+    // waves spawn six, all other waves three.
+    const nibblerCount = loaded.length === 0 ? 6 : 3;
+    const standingPillars = this.pillarsEnabled.flatMap((on, i) => (on ? [i] : []));
+    const pillar =
+      standingPillars.length > 0
+        ? standingPillars[Math.floor(Math.random() * standingPillars.length)]
+        : undefined;
+    const zoneTiles: Coordinates[] = [];
+    for (let dx = 0; dx < 3; dx++) {
+      for (let dy = 0; dy < 3; dy++) {
+        zoneTiles.push([NIBBLER_SPAWN[0] + dx, NIBBLER_SPAWN[1] - dy]);
+      }
+    }
+    for (let i = zoneTiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [zoneTiles[i], zoneTiles[j]] = [zoneTiles[j], zoneTiles[i]];
+    }
+    for (let i = 0; i < nibblerCount; i++) {
+      const [nx, ny] = zoneTiles[i];
+      this.mobs.push(
+        convertMobSpecToMob(
+          pillar !== undefined
+            ? [nx, ny, NPC_TYPES.NIBBLER, pillar]
+            : [nx, ny, NPC_TYPES.NIBBLER],
+        ),
+      );
     }
     const availSpawns = [...SPAWNS];
     for (let i = 0; i < loaded.length; i++) {
@@ -855,6 +884,41 @@ export class LineOfSight {
     }
   }
 
+  /**
+   * The pillar a nibbler is walking to: its assigned pillar if it still
+   * stands, otherwise the nearest standing pillar, otherwise null (the
+   * nibbler hunts the player instead).
+   */
+  private nibblerTargetPillar(mob: Mob): number | null {
+    const assigned = mob[6];
+    if (assigned !== undefined && this.pillarsEnabled[assigned]) {
+      return assigned;
+    }
+    let best: number | null = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < PILLARS.length; i++) {
+      if (!this.pillarsEnabled[i]) {
+        continue;
+      }
+      const [tx, ty] = this.pillarTargetTile(i, mob);
+      const dist = Math.max(Math.abs(tx - mob[0]), Math.abs(ty - mob[1]));
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  /** The tile of the given pillar closest to the mob. */
+  private pillarTargetTile(pillar: number, mob: Mob): Coordinates {
+    const [px, py] = PILLARS[pillar];
+    return [
+      Math.max(px, Math.min(px + PILLAR_SIZE - 1, mob[0])),
+      Math.max(py - PILLAR_SIZE + 1, Math.min(py, mob[1])),
+    ];
+  }
+
   private moveMobs(canMove: boolean, canGainLos: boolean) {
     for (let i = 0; i < this.mobs.length; i++) {
       if (this.mobs[i][2] < FIRST_DECORATIVE_TYPE) {
@@ -865,14 +929,30 @@ export class LineOfSight {
         const t = mob[2];
         const { size: s, range: r } = NPC_INFO[t];
 
-        if (
-          canMove &&
-          !(canGainLos && this.hasLOS(x, y, this.selected[0], this.selected[1], s, r, true))
-        ) {
-          const dx = x + Math.sign(this.selected[0] - x);
-          let dy = y + Math.sign(this.selected[1] - y);
+        const pillarTarget =
+          t === NPC_TYPES.NIBBLER ? this.nibblerTargetPillar(mob) : null;
+        let targetX: number;
+        let targetY: number;
+        let shouldMove: boolean;
+        if (pillarTarget !== null) {
+          // nibblers walk to their pillar regardless of player line of sight
+          [targetX, targetY] = this.pillarTargetTile(pillarTarget, mob);
+          shouldMove = canMove;
+        } else {
+          targetX = this.selected[0];
+          targetY = this.selected[1];
+          shouldMove =
+            canMove && !(canGainLos && this.hasLOS(x, y, targetX, targetY, s, r, true));
+        }
+
+        if (shouldMove) {
+          const dx = x + Math.sign(targetX - x);
+          let dy = y + Math.sign(targetY - y);
           //allows corner safespotting
-          if (this.doesCollide(dx, dy, s, this.selected[0], this.selected[1], 1)) {
+          if (
+            pillarTarget === null &&
+            this.doesCollide(dx, dy, s, targetX, targetY, 1)
+          ) {
             dy = mob[1];
           }
           if (this.legalPosition(dx, dy, s, i)) {
@@ -901,7 +981,9 @@ export class LineOfSight {
       const y = mob[1];
       const t = mob[2];
       let attacked = 0;
-      if (t < FIRST_DECORATIVE_TYPE) {
+      const isPillarBound =
+        t === NPC_TYPES.NIBBLER && this.nibblerTargetPillar(mob) !== null;
+      if (t < FIRST_DECORATIVE_TYPE && !isPillarBound) {
         const { size: s, range: r } = NPC_INFO[t];
         if (canAttack && this.hasLOS(x, y, this.selected[0], this.selected[1], s, r, true)) {
           if (mob[5] <= 0) {
@@ -1123,22 +1205,30 @@ export class LineOfSight {
         NPC_INFO[t].color,
       );
     } else if (this.cursorLocation) {
-      // currently placing an NPC, draw its LOS
+      // currently placing an NPC (or moving the player), draw its LOS;
+      // the player's LoS is red as in the original tool
       const { size: s, range: r, color: c } = NPC_INFO[this.mode];
-      this.drawLOS(this.cursorLocation[0], this.cursorLocation[1], s, r, this.mode > 0, c);
+      this.drawLOS(
+        this.cursorLocation[0],
+        this.cursorLocation[1],
+        s,
+        r,
+        this.mode > 0,
+        this.mode === MODE_PLAYER ? "red" : c,
+      );
     } else {
-      // draw the player's LOS
-      const { size: s, range: r, color: c } = NPC_INFO[MODE_PLAYER];
-      this.drawLOS(this.selected[0], this.selected[1], s, r, false, c);
+      // draw the player's LOS, red as in the original tool
+      const { size: s, range: r } = NPC_INFO[MODE_PLAYER];
+      this.drawLOS(this.selected[0], this.selected[1], s, r, false, "red");
     }
 
-    // draw player: magenta tile (contrasts with the cyan LoS overlay) with
-    // the sprite squashed into it, as in Supalosa's tool. The draw rect is
-    // exactly the tile square, so the same code works in both orientations
-    // (with the flipped south sprite)
+    // draw player: cyan tile (as in the original tool) with the sprite
+    // squashed into it, as in Supalosa's tool. The draw rect is exactly the
+    // tile square, so the same code works in both orientations (with the
+    // flipped south sprite)
     {
       const { size: s } = NPC_INFO[MODE_PLAYER];
-      ctx.fillStyle = "magenta";
+      ctx.fillStyle = "cyan";
       ctx.fillRect(
         this.selected[0] * TILE_SIZE,
         (this.selected[1] + 1) * TILE_SIZE,

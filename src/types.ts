@@ -6,8 +6,19 @@ export type MobType = number;
 export type MobSpawnX = number;
 export type MobSpawnY = number;
 export type MobCooldown = number;
-export type Mob = [MobX, MobY, MobType, MobSpawnX, MobSpawnY, MobCooldown];
-export type MobSpec = [MobSpawnX, MobSpawnY, MobType];
+// Index of the pillar a nibbler is assigned to walk to; unset for other
+// npcs and for nibblers that just head for their nearest standing pillar.
+export type MobAssignedPillar = number;
+export type Mob = [
+  MobX,
+  MobY,
+  MobType,
+  MobSpawnX,
+  MobSpawnY,
+  MobCooldown,
+  MobAssignedPillar?,
+];
+export type MobSpec = [MobSpawnX, MobSpawnY, MobType, MobAssignedPillar?];
 
 // each entry corresponds to a value for the mob in that position.
 // first 8 bits = attacked flag

@@ -4,13 +4,43 @@ import { Mob } from "../types";
 import { NPC_TYPES } from "../constants";
 import { checkIdleStep, checkMove } from "./utils";
 
-describe("nibbler pathing", () => {
+describe("nibbler pathing with pillars standing", () => {
   let los: LineOfSight;
 
   const nibbler: Mob = [5, 5, NPC_TYPES.NIBBLER, 5, 5, 0];
   beforeAll(() => {
     // this is a sequential test, so only reset state at the start
     los = new LineOfSight();
+    los._setSelected([nibbler[0], nibbler[1]], nibbler[2]);
+    los.place();
+    los._setSelected([5, 8], NPC_TYPES.PLAYER);
+  });
+
+  test("nibbler heads for the nearest pillar, not the player", () => {
+    los.step();
+    checkMove(los, nibbler, 4, 6);
+    los.step();
+    checkMove(los, nibbler, 3, 7);
+  });
+
+  test("nibbler stops beside the pillar and never attacks the player", () => {
+    los.step();
+    checkIdleStep(los, nibbler);
+    expect(los.tape.every((line) => line.every((v) => (v & 0xff) === 0))).toBe(
+      true,
+    );
+  });
+});
+
+describe("nibbler pathing with no pillars", () => {
+  let los: LineOfSight;
+
+  const nibbler: Mob = [5, 5, NPC_TYPES.NIBBLER, 5, 5, 0];
+  beforeAll(() => {
+    los = new LineOfSight();
+    los.togglePillar(0);
+    los.togglePillar(1);
+    los.togglePillar(2);
     los._setSelected([nibbler[0], nibbler[1]], nibbler[2]);
     los.place();
   });
@@ -63,6 +93,10 @@ describe("nibbler collision rules", () => {
   const nibbler: Mob = [12, 12, NPC_TYPES.NIBBLER, 12, 12, 0];
   beforeAll(() => {
     los = new LineOfSight();
+    // no pillars, so the nibbler hunts the player
+    los.togglePillar(0);
+    los.togglePillar(1);
+    los.togglePillar(2);
     los._setSelected([melee[0], melee[1]], melee[2]);
     los.place();
     los._setSelected([nibbler[0], nibbler[1]], nibbler[2]);

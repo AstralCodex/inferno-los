@@ -40,7 +40,7 @@ export const NPC_INFO: Record<number, NpcInfo> = {
   [NPC_TYPES.BAT]: { size: 2, range: 4, cd: 3, imgSouth: "bat-south.png", imgNorth: "bat-north.png", color: "grey", tapeColor: "grey", name: "Bat (Jal-MejRah)" },
   [NPC_TYPES.BLOB_1]: { size: 3, range: 15, cd: 6, imgSouth: "blob-south.png", imgNorth: "blob-north.png", color: "yellow", tapeColor: "yellow", name: "Blob (Jal-Ak)" },
   [NPC_TYPES.BLOB_2]: { size: 3, range: 15, cd: 6, imgSouth: "blob-south.png", imgNorth: "blob-north.png", color: "blue", tapeColor: "blue", name: "Blob (Jal-Ak)" },
-  [NPC_TYPES.NIBBLER]: { size: 1, range: 1, cd: 4, imgSouth: "nibbler-west.png", imgNorth: "nibbler-west.png", color: "red", tapeColor: "purple", name: "Nibbler (Jal-Nib)" },
+  [NPC_TYPES.NIBBLER]: { size: 1, range: 1, cd: 4, imgSouth: "nibbler-map-south.png", imgNorth: "nibbler-map-north.png", color: "red", tapeColor: "purple", name: "Nibbler (Jal-Nib)" },
   [NPC_TYPES.MELEE]: { size: 4, range: 1, cd: 4, imgSouth: "melee-south.png", imgNorth: "melee-north.png", color: "orange", tapeColor: "orange", name: "Melee (Jal-ImKot)" },
   [NPC_TYPES.RANGER]: { size: 3, range: 15, cd: 4, imgSouth: "ranger-south.png", imgNorth: "ranger-north.png", color: "lime", tapeColor: "lime", name: "Ranger (Jal-Xil)" },
   [NPC_TYPES.MAGER]: { size: 4, range: 15, cd: 4, imgSouth: "mager-south.png", imgNorth: "mager-north.png", color: "red", tapeColor: "red", name: "Mager (Jal-Zek)" },
@@ -82,15 +82,11 @@ export const START_TILES: { name: string; tile: Coordinates }[] = [
   { name: "Aatykon", tile: [13, 10] },
 ];
 
-// 3x3 nibbler spawn zone marker
+// 3x3 nibbler spawn zone marker; wave nibblers spawn on its tiles
 export const NIBBLER_SPAWN: Coordinates = [8, 13];
 
-// Decorative nibbler spawn groups placed by wave loading, one chosen at random.
-export const NIBBLER_GROUPS: [number, number, NpcType][] = [
-  [3, 9, NPC_TYPES.NIBBLERS_WEST],
-  [16, 7, NPC_TYPES.NIBBLERS_NORTH],
-  [10, 20, NPC_TYPES.NIBBLERS_SOUTH],
-];
+// URL suffix letters for a nibbler's assigned pillar, [West, North, South]
+export const PILLAR_URL_CODES = ["w", "n", "s"];
 
 export const DELAY_FIRST_ATTACK_TICKS = 3;
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { LineOfSight } from "../lineOfSight";
-import { FIRST_DECORATIVE_TYPE, NPC_TYPES, SPAWNS, WAVES } from "../constants";
+import { NPC_TYPES, SPAWNS, WAVES } from "../constants";
 
 describe("melee dig", () => {
   let los: LineOfSight;
@@ -33,15 +33,34 @@ describe("wave loading", () => {
     los = new LineOfSight();
   });
 
-  test("loads a wave with its nibbler group and npcs on spawn zones", () => {
+  test("loads a wave with three nibblers and npcs on spawn zones", () => {
     los.loadWave(4); // wave 4 = single blob
     const mobs = los._getMobs();
-    expect(mobs).toHaveLength(2);
-    const decorative = mobs.filter((m) => m[2] >= FIRST_DECORATIVE_TYPE);
-    expect(decorative).toHaveLength(1);
+    expect(mobs).toHaveLength(4);
     const blobs = mobs.filter((m) => m[2] === NPC_TYPES.BLOB_1);
     expect(blobs).toHaveLength(1);
     expect(SPAWNS).toContainEqual([blobs[0][0], blobs[0][1]]);
+    const nibblers = mobs.filter((m) => m[2] === NPC_TYPES.NIBBLER);
+    expect(nibblers).toHaveLength(3);
+    // distinct tiles within the 3x3 spawn zone, all heading for the same
+    // standing pillar
+    const tiles = new Set(nibblers.map((m) => `${m[0]},${m[1]}`));
+    expect(tiles.size).toBe(3);
+    for (const n of nibblers) {
+      expect(n[0]).toBeGreaterThanOrEqual(8);
+      expect(n[0]).toBeLessThanOrEqual(10);
+      expect(n[1]).toBeGreaterThanOrEqual(11);
+      expect(n[1]).toBeLessThanOrEqual(13);
+      expect([0, 1, 2]).toContain(n[6]);
+    }
+    expect(new Set(nibblers.map((m) => m[6])).size).toBe(1);
+  });
+
+  test("nibbler-only waves spawn six nibblers", () => {
+    los.loadWave(3); // wave 3 has no other npcs
+    const mobs = los._getMobs();
+    expect(mobs.filter((m) => m[2] === NPC_TYPES.NIBBLER)).toHaveLength(6);
+    expect(mobs).toHaveLength(6);
   });
 
   test("loads wave 66 with two magers on distinct spawns", () => {
@@ -62,27 +81,31 @@ describe("wave loading", () => {
     expect(mobs.filter((m) => m[2] === NPC_TYPES.BAT)).toHaveLength(1);
   });
 
-  test("nibbler group only spawns at standing pillars", () => {
+  test("nibblers are only assigned standing pillars", () => {
     los.togglePillar(0);
     los.togglePillar(1); // only the south pillar remains
     for (let i = 0; i < 5; i++) {
       los.loadWave(1);
-      const decorative = los
+      const nibblers = los
         ._getMobs()
-        .filter((m) => m[2] >= FIRST_DECORATIVE_TYPE);
-      expect(decorative).toHaveLength(1);
-      expect(decorative[0][2]).toBe(NPC_TYPES.NIBBLERS_SOUTH);
+        .filter((m) => m[2] === NPC_TYPES.NIBBLER);
+      expect(nibblers).toHaveLength(3);
+      for (const n of nibblers) {
+        expect(n[6]).toBe(2);
+      }
     }
   });
 
-  test("no nibbler group when all pillars are down", () => {
+  test("nibblers have no pillar assignment when all pillars are down", () => {
     los.togglePillar(0);
     los.togglePillar(1);
     los.togglePillar(2);
     los.loadWave(1);
-    expect(
-      los._getMobs().filter((m) => m[2] >= FIRST_DECORATIVE_TYPE),
-    ).toHaveLength(0);
+    const nibblers = los._getMobs().filter((m) => m[2] === NPC_TYPES.NIBBLER);
+    expect(nibblers).toHaveLength(3);
+    for (const n of nibblers) {
+      expect(n[6]).toBeUndefined();
+    }
   });
 
   test("ignores invalid wave numbers", () => {

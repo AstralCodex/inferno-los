@@ -73,6 +73,14 @@ describe("url tests", () => {
       const decoded = decodeURL(new URL("http://localhost:3000/?030910."));
       expect(decoded.mobs).to.deep.equal([[3, 9, 10, 3, 9, 0]]);
     });
+
+    test("nibbler pillar assignment round-trips", () => {
+      expect(getSpawnUrl([[8, 11, 4, 0]])).toBe(
+        "http://localhost:3000/?08114w.",
+      );
+      const decoded = decodeURL(new URL("http://localhost:3000/?08114w."));
+      expect(decoded.mobs).to.deep.equal([[8, 11, 4, 8, 11, 0, 0]]);
+    });
   });
 
   describe("replay encoding tests", () => {

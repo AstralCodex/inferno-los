@@ -1,15 +1,25 @@
+import { PILLAR_URL_CODES } from "./constants";
 import { Coordinates, Mob, MobSpec, ReplayData } from "./types";
 
-export const convertMobSpecToMob = (mobSpec: MobSpec): Mob => [
-  mobSpec[0], // x
-  mobSpec[1], // y
-  mobSpec[2], // type
-  mobSpec[0], // initial X
-  mobSpec[1], // initial Y
-  0, // attack delay
-];
+export const convertMobSpecToMob = (mobSpec: MobSpec): Mob => {
+  const mob: Mob = [
+    mobSpec[0], // x
+    mobSpec[1], // y
+    mobSpec[2], // type
+    mobSpec[0], // initial X
+    mobSpec[1], // initial Y
+    0, // attack delay
+  ];
+  if (mobSpec[3] !== undefined) {
+    mob.push(mobSpec[3]); // assigned pillar
+  }
+  return mob;
+};
 
 export function getMobSpec(mob: Mob): MobSpec {
+  if (mob[6] !== undefined) {
+    return [mob[0], mob[1], mob[2], mob[6]];
+  }
   return [mob[0], mob[1], mob[2]];
 }
 
@@ -57,7 +67,8 @@ export function record(
     URL.revokeObjectURL(url);
   };
   mediaRecorder.start();
-  step();
+  // hold the initial frame for one tick before the first step
+  setTimeout(step, 600);
 }
 
 export type Bounds = {
@@ -166,11 +177,17 @@ export function decodeURL(location: URL): DecodeURLResult {
     } else {
       const lx = parseInt(token.slice(0, 2));
       const ly = parseInt(token.slice(2, 4));
-      const lm = parseInt(token.slice(4));
+      const rest = token.slice(4);
+      const lm = parseInt(rest);
       if (isNaN(lx) || isNaN(ly) || isNaN(lm)) {
         continue;
       }
-      mobs.push(convertMobSpecToMob([lx, ly, lm]));
+      // optional pillar-assignment suffix on nibbler tokens, e.g. 08114w.
+      const suffix = rest.replace(/^[0-9]+/, "");
+      const pillar = PILLAR_URL_CODES.indexOf(suffix);
+      mobs.push(
+        convertMobSpecToMob(pillar >= 0 ? [lx, ly, lm, pillar] : [lx, ly, lm]),
+      );
     }
   }
 
@@ -222,12 +239,15 @@ export function getSpawnUrl(
   south: boolean = true,
 ) {
   let url = getBaseUrl();
-  mobSpecs.forEach(([locationX, locationY, mobType]) => {
+  mobSpecs.forEach(([locationX, locationY, mobType, pillar]) => {
     url = url
       .concat(("00" + locationX).slice(-2))
       .concat(("00" + locationY).slice(-2))
-      .concat(mobType.toString())
-      .concat(".");
+      .concat(mobType.toString());
+    if (pillar !== undefined) {
+      url = url.concat(PILLAR_URL_CODES[pillar]);
+    }
+    url = url.concat(".");
   });
   if (!pillars[0]) {
     url = url.concat("noWe.");
